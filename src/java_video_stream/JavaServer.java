@@ -37,10 +37,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 
-/**
- *
- * @author Nghia
- */
+
 public class JavaServer {
 
 	/**
@@ -53,7 +50,7 @@ public class JavaServer {
 	static int count = 0;
 	public static BufferedReader[] inFromClient;
 	public static DataOutputStream[] outToClient;
-	
+	public static Socket connectionSocket[] = new Socket[30];
 	public static void main(String[] args) throws Exception
 	{
 		JavaServer jv = new JavaServer();
@@ -73,7 +70,6 @@ public class JavaServer {
 
 		ServerSocket welcomeSocket = new ServerSocket(6782);
 		System.out.println(welcomeSocket.isClosed());
-		Socket connectionSocket[] = new Socket[30];
 		inFromClient = new BufferedReader[30];
 		outToClient = new DataOutputStream[30];
 
@@ -110,12 +106,13 @@ public class JavaServer {
 
 			System.out.println("waiting\n ");
 			connectionSocket[i] = welcomeSocket.accept();
-			System.out.println("connected " + i);
-
+			System.out.println("connected " + (i + 1));
+                        System.out.println(connectionSocket[i]);
+                        //System.out.println(connectionSocket[i].isClosed());
+                        System.out.println(count);
 			inFromClient[i] = new BufferedReader(new InputStreamReader(connectionSocket[i].getInputStream()));
 			outToClient[i] = new DataOutputStream(connectionSocket[i].getOutputStream());
 			outToClient[i].writeBytes("Connected: from Server\n");
-
 			
 			st[i] = new SThread(i);
 			st[i].start();
@@ -124,14 +121,13 @@ public class JavaServer {
 			{
 				Sentencefromserver sen = new Sentencefromserver();
 				sen.start();
-				count++;
 			}
 
 			System.out.println(inet[i]);
 			sendvid.start();
 
 			i++;
-
+                        count++;
 			if (i == 30) {
 				break;
 			}
@@ -145,7 +141,6 @@ class Vidthread extends Thread {
 	// InetAddress iadd = InetAddress.getLocalHost();
 	JFrame jf = new JFrame("scrnshots before sending");
 	JLabel jleb = new JLabel();
-
 	DatagramSocket soc;
 
 	Robot rb = new Robot();
@@ -202,6 +197,8 @@ class Vidthread extends Thread {
 				outbuff = baos.toByteArray();
 
 				for (int j = 0; j < num; j++) {
+
+                                        
 					DatagramPacket dp = new DatagramPacket(outbuff, outbuff.length, JavaServer.inet[j],
 							JavaServer.port[j]);
 					//System.out.println("Frame Sent to: " + JavaServer.inet[j] + " port: " + JavaServer.port[j]
@@ -263,7 +260,7 @@ class Canvas_Demo {
 		mediaPlayer = mediaPlayerFactory.newEmbeddedMediaPlayer();
 		CanvasVideoSurface videoSurface = mediaPlayerFactory.newVideoSurface(canvas);
 		mediaPlayer.setVideoSurface(videoSurface);
-
+                
 		// Construction of the jframe :
 		frame = new JFrame("Video Streaming");
 		// frame.setLayout(null);
@@ -285,10 +282,18 @@ class Canvas_Demo {
                 JLabel label= new JLabel();
                 label.setText("Chat box:");
                 JLabel label1= new JLabel();
-                label1.setText("Comment:");          
-		myjp = new JPanel(new GridLayout(6, 1));
+                label1.setText("Comment:");
+		myjp = new JPanel(new GridLayout(8, 1));
 		JButton bn = new JButton("Open File");
                 myjp.add(bn);
+                                JLabel label2 = new JLabel("Views: 0");
+                myjp.add(label2, BorderLayout.CENTER);
+
+                JButton changeButton = new JButton("refresh");
+                changeButton.addActionListener(e -> {
+                    label2.setText("Views: "+ String.valueOf(JavaServer.i)); // Change the text of the label here
+                });
+                myjp.add(changeButton);
                 myjp.add(label);
 		JButton sender = new JButton("Send Text");
                 
@@ -305,7 +310,6 @@ class Canvas_Demo {
                 jp2= new JPanel();
 		jp2.add(sender);
 		ta.setText("Waiting...");
-
 		ta.setCaretPosition(ta.getDocument().getLength());
                 myjp.add(jp2);
 		mypanel.add(myjp);
@@ -360,7 +364,7 @@ class Canvas_Demo {
 }
 
 class SThread extends Thread {
-
+        boolean check = true;
 	public static String clientSentence;
 	int srcid;
 	BufferedReader inFromClient = JavaServer.inFromClient[srcid];
@@ -374,17 +378,15 @@ class SThread extends Thread {
 	}
 
 	public void run() {
-		while (true) {
+            while(check){
 			try {
-
-				clientSentence = inFromClient.readLine();
+                                clientSentence = inFromClient.readLine();
 				// clientSentence = inFromClient.readLine();
-
 				System.out.println("From Client " + srcid + ": " + clientSentence);
 				Canvas_Demo.ta.append("From Client " + srcid + ": " + clientSentence + "\n");
-				
+				Canvas_Demo.ta.append(String.valueOf(JavaServer.i));
 				for(int i=0; i<JavaServer.i; i++){
-                    
+                                    
                     if(i!=srcid)
                         outToClient[i].writeBytes("Client "+srcid+": "+clientSentence + '\n');	//'\n' is necessary
                 }
@@ -393,10 +395,10 @@ class SThread extends Thread {
 				Canvas_Demo.myjp.repaint();
 
 					} catch (Exception e) {
+                                            e.printStackTrace();
+                                            
 			}
-
-		}
-	}
+	}}
 }
 
 class Sentencefromserver extends Thread {
@@ -417,13 +419,11 @@ class Sentencefromserver extends Thread {
 				{
 					for (int i = 0; i < JavaServer.i; i++) {
 						JavaServer.outToClient[i].writeBytes("From Server: "+sendingSentence+'\n');
-						
 					}
 					sendingSentence = null;
 				}
 
 			} catch (Exception e) {
-
 			}
 		}
 	}

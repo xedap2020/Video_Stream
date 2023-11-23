@@ -34,10 +34,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.ScrollPaneConstants;
 
-/**
- *
- * @author Nghia
- */
+
 public class JavaClient {
     public static DatagramSocket ds;
 
@@ -244,4 +241,5 @@ class CThread extends Thread {
         }
     }
 }
+
 
